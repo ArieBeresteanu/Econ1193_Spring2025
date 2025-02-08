@@ -130,6 +130,15 @@
         "weight_pounds" : 252,
         "team" : "Pittsburgh Steelers",
         "position" : "Linebacker"
+    },
+    "Rihanna" : {
+        "full name": "Robyn Rihanna Fenty",
+        "date of birth": "February 20, 1988",
+        "place of birth": "Saint Michael, Barbados",
+        "profession": ["singer", "actress", "entrepreneur"],
+        "accomplishments": ["seven U.S. diamond certified singles", "14 number-one singles on the Billboard Hot 100"],
+        "kids": "2",
+        "partner": "A$AP Rocky",
     }
-    
+      
 }   

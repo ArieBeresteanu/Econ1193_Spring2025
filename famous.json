@@ -216,5 +216,18 @@
         "groups": "Fugees",
         "notable_albums": "The Miseducation of Lauryn Hill",
         "awards": "Grammy Awards (1999) - Album of the Year", "Best R&B Album", "Best Female R&B Vocal Performance", "Best R&B Song"
-        }
+
+    },
+    "Lana": {
+        "full name": "Lana del Rey",
+        "born": "1985-06-21",
+        "official website": "https://www.lanadelrey.com/",
+        "most popular album": "Ultraviolence",
+        "best songs": ["venice beach", "video games", "let the light in"],
+        "husband": "Jeremy Dufrene",
+        "place of birth": "Manhattan, New York",
+        "zodiac sign": "cancer"
+        "actress": false
+    }
 }
+        

@@ -179,15 +179,15 @@ def multiSeries(varList, myKey, first='2018', last='2023',*,verbose=True):
     return new_df
 
 def fetch_bls_data(myKey: str, 
-                   series_ids: list[str], 
-                   start: str, end: str) -> dict:
+                   series_ids: list[str], *, 
+                   first: str ="2021", last: str="2025") -> list:
     
     base_url = 'https://api.bls.gov/publicAPI/v2/timeseries/data/'
     headers = {'Content-type': 'application/json'}
     parameters = {
         "seriesid": series_ids,
-        "startyear": start,
-        "endyear": end,
+        "startyear": first,
+        "endyear": last,
         "catalog": True,
         "calculations": False,
         "annualaverage": False,
@@ -216,20 +216,26 @@ def parse_series_data(series_data: list[dict],
         current_df = pd.DataFrame(data)[['year', 'period', 'value']].astype({'value': 'float64'})
         current_df.rename(columns={'value': series_id}, inplace=True)
         df = df.merge(current_df, on=['year', 'period'], how='outer')
-    return df.rename(columns=seriesDict)
+    return df 
 
-def prepare_dataframe(df: pd.DataFrame, 
+def prepare_dataframe(df: pd.DataFrame, *,
                       target_col: str, 
-                      freq=12) -> pd.DataFrame:
+                      freq:int =12,
+                      change:bool = True) -> pd.DataFrame:
     
     df['month'] = df['period'].apply(lambda x: int(x.replace('M', '')))
     df['time_label'] = df['year'].astype(str) + '-' + df['month'].astype(str)
     df = df.sort_values(by=['year', 'month'])
-    df['change'] = df[target_col].pct_change(periods=freq) * 100
+    if change:
+        df['change'] = df[target_col].pct_change(periods=freq) * 100
+    else:
+        df['change'] = df[target_col]  #actually, no change is computed, we're just using this column name
     return df
 
 def plot_changes(df: pd.DataFrame, 
-                 label: str):
+                 label: str,
+                 change:bool =True,
+                freq:int =12):
     
     plt.figure(figsize=(12, 5))
     plt.plot(df['time_label'], df['change'], label=label, marker='o', linestyle='-')
@@ -238,9 +244,12 @@ def plot_changes(df: pd.DataFrame,
     plt.title(label)
     plt.legend(loc='upper left')
 
+    #When computing changes, we "loose" the first 'freq' observations
+    first_obs = freq-1 if change else 0
+        
     if len(df['time_label']) >= 12:
-        plt.xticks(ticks=range(11, len(df['time_label']), 3),
-                   labels=df['time_label'].iloc[11::3],
+        plt.xticks(ticks=range(first_obs, len(df['change']), 3),
+                   labels=df['time_label'].iloc[first_obs::3],
                    rotation=45)
 
     last_idx = df['change'].last_valid_index()
@@ -256,15 +265,20 @@ def plot_changes(df: pd.DataFrame,
     plt.yticks(range(int(df['change'].min()) - 2, int(df['change'].max()) + 3, 2))
     plt.figtext(0.1, -0.1, "Source: Bureau of Labor Statistics and own calculations",
                 ha='left', fontsize=10, style='italic')
+
+    if 0 > df['change'].min() and 0 < df['change'].max():
+        plt.axhline(y=0, color='r', linestyle='-', label='', linewidth=1,alpha=0.5)
+
     plt.show()
 
 def BLS(myKey: str, 
-        seriesDict: dict[str, str] = {"CUUR0000SA0": "CPI-U"}, *, 
+        seriesDict: dict[str, str] = {"CUUR0000SA0": "Consumer Price Index - Urban consumers"}, *, 
         first: str = '2020', 
         last: str = '2025', 
         frequency="m",
         verbose: bool = False, 
-        display: bool = False) -> pd.DataFrame | None:
+        display: bool = False,
+        change:bool = True) -> pd.DataFrame | None:
     """
     Fetches and optionally plots time series data from the U.S. Bureau of Labor Statistics (BLS) API.
 
@@ -277,6 +291,7 @@ def BLS(myKey: str,
         last (str, optional): End year of the data request (e.g., '2025'). Defaults to '2025'.
         verbose (bool, optional): If True, prints status messages for each series. Defaults to False.
         display (bool, optional): If True, displays a plot of the 12-month percent change for the selected series. Defaults to False.
+        change (bool, optional): If true a percent change is computed, if false, we keep the levels
 
     Returns:
         pd.DataFrame or None: 
@@ -288,20 +303,21 @@ def BLS(myKey: str,
     """    
     series_ids = list(seriesDict.keys())
     series_names = list(seriesDict.values())
-    target_col = series_names[0]
+    target_col = series_ids[0]
 
-    series_data = fetch_bls_data(myKey, series_ids, first, last)
+    series_data = fetch_bls_data(myKey, series_ids, first=first, last=last) #this function returns a list of dictionaries
+    
     df = parse_series_data(series_data, seriesDict, verbose)
-
+    
     if frequency == 'q':
         freq = 4
     else:
         freq = 12
     
-    df = prepare_dataframe(df, target_col,freq=freq)
+    df = prepare_dataframe(df, target_col=target_col,freq=freq, change=change)
     
     if display:
-        plot_changes(df, target_col)
+        plot_changes(df, series_names[0],change,freq=freq)
         return None
     return df
 
